@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  directUrl = env("DIRECT_URL")
+  url       = env("DATABASE_URL")
+}
+
+model Admin {
+  id        String   @id @unique @default(uuid())
+  username  String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("admin")
+}
+
+model HarvestRecord {
+  id             String   @id @unique @default(uuid())
+  date           DateTime @unique @map("tanggal_panen")
+  weatherId      String?  @map("id_cuaca")
+  harvestAmount  Float    @map("hasil_panen")
+  productionCost Float    @map("biaya_produksi")
+  createdAt      DateTime @default(now()) @map("created_at")
+  weather        Weather? @relation(fields: [weatherId], references: [id])
+
+  @@map("hasil_panen")
+}
+
+model Weather {
+  id            String          @id @unique @default(uuid())
+  name          String          @unique @map("nama")
+  numericValue  Int             @map("nilai")
+  description   String?         @map("deskripsi")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @default(now()) @updatedAt @map("updated_at")
+  HarvestRecord HarvestRecord[]
+
+  @@map("cuaca")
+}
+
+model RegressionCoefficients {
+  id                  String   @id @unique @default(uuid())
+  modelName           String   @unique @map("nama_model")
+  intercept           Float    @map("intercept") // (b0)
+  weatherCoeff        Float    @map("koefisien_cuaca") // (b1)
+  productionCostCoeff Float    @map("koefisien_biaya_produksi") // (b2)
+  mape                Float?   @map("mape") // Mean Absolute Percentage Error
+  pe                  Float?   @map("pe") // Percentage Error
+  rSquared            Float?   @map("r_squared") // Coefficient of Determination
+  rmse                Float?   @map("rmse") // Root Mean Square Error
+  trainingDataCount   Int      @map("jumlah_data_latih")
+  trainedAt           DateTime @default(now()) @map("waktu_latih")
+  isActive            Boolean  @default(true) @map("aktif")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("koefisien_regresi")
+}
+
+model PredictionLog {
+  id              String   @id @unique @default(uuid())
+  date            DateTime @unique @map("tanggal_panen")
+  weather         String   @map("cuaca")
+  productionCost  Float    @map("biaya_produksi")
+  predictionValue Float    @map("nilai_prediksi")
+  modelUsed       String   @map("model_yang_digunakan")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("log_prediksi")
+}
