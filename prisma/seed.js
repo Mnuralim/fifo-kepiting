@@ -74,15 +74,15 @@ async function createHarvests() {
   const weatherIds = weathers.map((w) => w.id);
 
   const existingHarvests = await prisma.harvestRecord.findMany();
-  if (existingHarvests.length >= 50) {
-    console.log("Harvests already exist (50+ records). Skipping seeding.");
+  if (existingHarvests.length >= 90) {
+    console.log("Harvests already exist (90+ records). Skipping seeding.");
     return;
   }
 
   const harvests = [];
   const startDate = new Date("2025-06-01");
 
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 90; i++) {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + i);
 
@@ -111,13 +111,13 @@ async function createHarvests() {
     data: harvests,
   });
 
-  console.log("50 harvest records seeded successfully!");
+  console.log("90 harvest records seeded successfully!");
 }
 
 async function main() {
-  await createAdmin();
-  // await createWeathers();
-  // await createHarvests();
+  // await createAdmin();
+  await createWeathers();
+  await createHarvests();
   console.log("Seeding completed successfully!");
 }
 

@@ -66,7 +66,8 @@ export const HarvestsList = ({ pagination, harvests, weathers }: Props) => {
     },
     {
       header: "Cuaca",
-      accessor: (item) => item.weather?.name || "-",
+      accessor: (item) =>
+        `${item.weather?.name} (${item.weather?.numericValue})` || "-",
     },
     {
       header: "Biaya Produksi",

@@ -38,7 +38,7 @@ export const PredictForm = ({ weathers }: Props) => {
               <option value="">-- Pilih Kondisi Cuaca --</option>
               {weathers.map((weather) => (
                 <option key={weather.numericValue} value={weather.numericValue}>
-                  {weather.name}
+                  {weather.name} ({weather.numericValue})
                 </option>
               ))}
             </select>
