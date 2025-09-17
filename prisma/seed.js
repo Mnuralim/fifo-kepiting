@@ -93,57 +93,47 @@ async function createHarvests() {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + i);
 
-    // Pilih weather dengan pola yang lebih realistis
+    // Weather value (1-6)
     const weatherIndex = Math.floor(Math.random() * weatherIds.length);
     const weatherId = weatherIds[weatherIndex];
     const weatherValue = weatherIndex + 1; // 1-6
 
-    // Generate production cost dengan pola yang konsisten
-    // Biaya tinggi = hasil tinggi (korelasi positif yang kuat)
-    const baseCostInThousands = 180 + Math.floor(Math.random() * 120); // 180-300
-    const productionCost = baseCostInThousands * 1000;
+    // Production cost (dalam ribuan: 180-300)
+    const productionCostInThousands = 180 + Math.floor(Math.random() * 121); // 180-300
+    const productionCost = productionCostInThousands * 1000;
 
-    // Formula realistis: Hasil panen berkorelasi dengan biaya dan cuaca
-    // Base harvest dari biaya (semakin tinggi biaya, semakin tinggi hasil)
-    let baseHarvest = ((baseCostInThousands - 180) / 120) * 400 + 100; // 100-500 kg base
+    // FORMULA LINEAR SEDERHANA untuk harvest amount
+    // Base formula: harvest = intercept + (cost_coeff * cost) + (weather_coeff * weather) + noise
 
-    // Weather effect yang konsisten
-    // Weather 1-2 (tenang) = +50% hasil
-    // Weather 3-4 (sedang) = hasil normal
-    // Weather 5-6 (kencang) = -40% hasil
-    let weatherMultiplier;
-    if (weatherValue <= 2) {
-      weatherMultiplier = 1.3 + Math.random() * 0.4; // 1.3-1.7x (cuaca bagus)
-    } else if (weatherValue <= 4) {
-      weatherMultiplier = 0.9 + Math.random() * 0.3; // 0.9-1.2x (cuaca normal)
-    } else {
-      weatherMultiplier = 0.4 + Math.random() * 0.3; // 0.4-0.7x (cuaca buruk)
+    const intercept = 50; // base minimum
+    const costCoefficient = 1.2; // setiap 1rb biaya = +1.2 kg hasil
+    const weatherCoefficient = -25; // setiap +1 weather value = -25 kg hasil (cuaca buruk)
+
+    // Hitung hasil berdasarkan formula linear
+    let harvestAmount =
+      intercept +
+      costCoefficient * productionCostInThousands +
+      weatherCoefficient * weatherValue;
+
+    // Tambahkan noise kecil saja (±10%)
+    const noisePercent = -0.1 + Math.random() * 0.2; // -10% to +10%
+    harvestAmount = harvestAmount * (1 + noisePercent);
+
+    // Pastikan dalam range yang masuk akal
+    harvestAmount = Math.max(20, Math.min(600, Math.round(harvestAmount)));
+
+    // Untuk beberapa kasus ekstrem (5% chance)
+    if (Math.random() < 0.05) {
+      if (productionCostInThousands > 280 && weatherValue <= 2) {
+        // High cost + good weather = exceptional result
+        harvestAmount = 800 + Math.floor(Math.random() * 700); // 800-1500
+      }
     }
 
-    let harvestAmount = baseHarvest * weatherMultiplier;
-
-    // Tambahkan sedikit noise tapi tetap realistis (±15%)
-    const noise = 0.85 + Math.random() * 0.3; // 0.85-1.15
-    harvestAmount *= noise;
-
-    // Aturan bisnis:
-    // - Hasil tinggi jarang (5% chance untuk >800kg)
-    // - Hasil sedang umum (70% chance 100-400kg)
-    // - Hasil rendah kadang (25% chance 20-100kg)
-    const resultCategory = Math.random();
-    if (resultCategory < 0.05 && harvestAmount > 600) {
-      // 5% chance hasil sangat tinggi
-      harvestAmount = 800 + Math.random() * 700; // 800-1500kg
-    } else if (resultCategory < 0.75) {
-      // 70% hasil normal
-      harvestAmount = Math.max(100, Math.min(400, harvestAmount));
-    } else {
-      // 25% hasil rendah karena faktor eksternal
-      harvestAmount = 20 + Math.random() * 80; // 20-100kg
+    // Untuk hasil rendah (10% chance) - faktor eksternal
+    if (Math.random() < 0.1) {
+      harvestAmount = 20 + Math.floor(Math.random() * 80); // 20-100
     }
-
-    // Final bounds
-    harvestAmount = Math.max(20, Math.min(1500, Math.round(harvestAmount)));
 
     harvests.push({
       date: date.toISOString(),
@@ -158,45 +148,43 @@ async function createHarvests() {
   });
   console.log("90 harvest records seeded successfully!");
 
-  // Analisis korelasi untuk memastikan data bagus
-  const costs = harvests.map((h) => h.productionCost / 1000); // dalam ribuan
+  // Analisis data yang dibuat
+  console.log("\n=== DATA ANALYSIS ===");
+
+  const costs = harvests.map((h) => h.productionCost / 1000);
   const amounts = harvests.map((h) => h.harvestAmount);
   const weatherss = harvests.map((h) => {
-    const weatherIdx = weatherIds.findIndex((id) => id === h.weatherId);
-    return weatherIdx + 1;
+    const idx = weatherIds.findIndex((id) => id === h.weatherId);
+    return idx + 1;
   });
 
-  // Hitung korelasi sederhana
-  const costMean = costs.reduce((a, b) => a + b) / costs.length;
-  const amountMean = amounts.reduce((a, b) => a + b) / amounts.length;
-  const weatherMean = weatherss.reduce((a, b) => a + b) / weathers.length;
-
-  let costAmountCorr = 0,
-    weatherAmountCorr = 0;
-  for (let i = 0; i < harvests.length; i++) {
-    costAmountCorr += (costs[i] - costMean) * (amounts[i] - amountMean);
-    weatherAmountCorr +=
-      (weatherss[i] - weatherMean) * (amounts[i] - amountMean);
+  console.log(`Sample data (first 10):`);
+  for (let i = 0; i < Math.min(10, harvests.length); i++) {
+    console.log(
+      `  Cost: ${costs[i]}k, Weather: ${weathers[i]}, Harvest: ${amounts[i]}kg`
+    );
   }
 
-  console.log(`Data Analysis:`);
-  console.log(`- Average harvest: ${Math.round(amountMean)} kg`);
+  // Formula yang digunakan
+  console.log(`\nFormula used:`);
   console.log(
-    `- Average cost: Rp ${Math.round(costMean * 1000).toLocaleString()}`
-  );
-  console.log(`- Average weather: ${weatherMean.toFixed(1)}`);
-  console.log(
-    `- Cost-Harvest correlation trend: ${
-      costAmountCorr > 0 ? "Positive" : "Negative"
-    }`
+    `  harvest = 50 + (1.2 * cost_in_thousands) + (-25 * weather_value) + noise`
   );
   console.log(
-    `- Weather-Harvest correlation trend: ${
-      weatherAmountCorr > 0
-        ? "Positive (worse weather = more harvest?)"
-        : "Negative (worse weather = less harvest)"
-    }`
+    `  Expected pattern: Higher cost = more harvest, Higher weather number = less harvest`
   );
+
+  // Statistik dasar
+  const avgCost = costs.reduce((a, b) => a + b) / costs.length;
+  const avgWeather = weatherss.reduce((a, b) => a + b) / weathers.length;
+  const avgHarvest = amounts.reduce((a, b) => a + b) / amounts.length;
+
+  console.log(`\nStatistics:`);
+  console.log(`  Average cost: ${avgCost.toFixed(0)}k`);
+  console.log(`  Average weather: ${avgWeather.toFixed(1)}`);
+  console.log(`  Average harvest: ${avgHarvest.toFixed(0)}kg`);
+  console.log(`  Min harvest: ${Math.min(...amounts)}kg`);
+  console.log(`  Max harvest: ${Math.max(...amounts)}kg`);
 }
 
 async function main() {
