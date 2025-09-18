@@ -1,15 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const { hash } = require("bcryptjs");
-
-// Konfigurasi khusus untuk Supabase
-const prisma = new PrismaClient({
-  log: ["warn", "error"],
-  datasources: {
-    db: {
-      url: process.env.DIRECT_URL || process.env.DATABASE_URL,
-    },
-  },
-});
+const prisma = new PrismaClient();
 
 async function createAdmin() {
   console.log("Seeding admin...");
@@ -64,6 +55,7 @@ async function createWeathers() {
       numericValue: 6,
     },
   ];
+
   const existingWeathers = await prisma.weather.findMany();
   if (existingWeathers.length === 0) {
     await prisma.weather.createMany({
@@ -77,10 +69,11 @@ async function createWeathers() {
 
 async function createHarvests() {
   console.log("Seeding harvests...");
+
   const weathers = await prisma.weather.findMany();
   const weatherIds = weathers.map((w) => w.id);
-  const existingHarvests = await prisma.harvestRecord.findMany();
 
+  const existingHarvests = await prisma.harvestRecord.findMany();
   if (existingHarvests.length >= 90) {
     console.log("Harvests already exist (90+ records). Skipping seeding.");
     return;
@@ -93,110 +86,92 @@ async function createHarvests() {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + i);
 
-    // Weather value (1-6)
+    // Generate base harvest amount with weighted distribution
+    // Most values will be between 20-300, with occasional peaks up to 1500
+    let harvestAmount;
+    const randomValue = Math.random();
+
+    if (randomValue < 0.05) {
+      // 5% chance of very high harvest (800-1500 kg) - rare cases
+      harvestAmount = Math.floor(Math.random() * 700) + 800;
+    } else if (randomValue < 0.15) {
+      // 10% chance of high harvest (400-799 kg)
+      harvestAmount = Math.floor(Math.random() * 400) + 400;
+    } else if (randomValue < 0.85) {
+      // 70% chance of normal harvest (100-399 kg) - most common range
+      harvestAmount = Math.floor(Math.random() * 300) + 100;
+    } else {
+      // 15% chance of low harvest (20-99 kg)
+      harvestAmount = Math.floor(Math.random() * 80) + 20;
+    }
+
     const weatherIndex = Math.floor(Math.random() * weatherIds.length);
     const weatherId = weatherIds[weatherIndex];
-    const weatherValue = weatherIndex + 1; // 1-6
 
-    // Production cost (dalam ribuan: 180-300)
-    const productionCostInThousands = 180 + Math.floor(Math.random() * 121); // 180-300
-    const productionCost = productionCostInThousands * 1000;
+    // Weather effect on harvest (maintains the correlation pattern)
+    const weatherEffect = (weatherIndex + 1) * 8; // Reduced multiplier to keep within limits
+    const weatherAdjustment = Math.random() * weatherEffect - weatherEffect / 2;
 
-    // FORMULA LINEAR SEDERHANA untuk harvest amount
-    // Base formula: harvest = intercept + (cost_coeff * cost) + (weather_coeff * weather) + noise
+    // Apply weather effect but ensure we stay within limits
+    harvestAmount = Math.max(
+      20,
+      Math.min(1500, harvestAmount + weatherAdjustment)
+    );
 
-    const intercept = 50; // base minimum
-    const costCoefficient = 1.2; // setiap 1rb biaya = +1.2 kg hasil
-    const weatherCoefficient = -25; // setiap +1 weather value = -25 kg hasil (cuaca buruk)
+    // Production cost calculation (180rb - 300rb range)
+    // Base cost calculation that correlates with harvest but stays within limits
+    const baseCostPerKg = 500 + (Math.random() * 200 - 100); // 400-600 per kg base
+    let productionCost = harvestAmount * baseCostPerKg;
 
-    // Hitung hasil berdasarkan formula linear
-    let harvestAmount =
-      intercept +
-      costCoefficient * productionCostInThousands +
-      weatherCoefficient * weatherValue;
+    // Add some variability while maintaining the 180k-300k range
+    const costVariation = Math.random() * 60000 - 30000; // ±30k variation
+    productionCost += costVariation;
 
-    // Tambahkan noise kecil saja (±10%)
-    const noisePercent = -0.1 + Math.random() * 0.2; // -10% to +10%
-    harvestAmount = harvestAmount * (1 + noisePercent);
-
-    // Pastikan dalam range yang masuk akal
-    harvestAmount = Math.max(20, Math.min(600, Math.round(harvestAmount)));
-
-    // Untuk beberapa kasus ekstrem (5% chance)
-    if (Math.random() < 0.05) {
-      if (productionCostInThousands > 280 && weatherValue <= 2) {
-        // High cost + good weather = exceptional result
-        harvestAmount = 800 + Math.floor(Math.random() * 700); // 800-1500
-      }
-    }
-
-    // Untuk hasil rendah (10% chance) - faktor eksternal
-    if (Math.random() < 0.1) {
-      harvestAmount = 20 + Math.floor(Math.random() * 80); // 20-100
-    }
+    // Ensure production cost stays within the specified range
+    productionCost = Math.max(180000, Math.min(300000, productionCost));
 
     harvests.push({
       date: date.toISOString(),
       weatherId: weatherId,
-      harvestAmount: harvestAmount,
-      productionCost: productionCost,
+      harvestAmount: Math.round(harvestAmount),
+      productionCost: Math.round(productionCost),
     });
   }
 
   await prisma.harvestRecord.createMany({
     data: harvests,
   });
+
   console.log("90 harvest records seeded successfully!");
 
-  // Analisis data yang dibuat
-  console.log("\n=== DATA ANALYSIS ===");
+  // Log some statistics for verification
+  const harvestAmounts = harvests.map((h) => h.harvestAmount);
+  const productionCosts = harvests.map((h) => h.productionCost);
 
-  const costs = harvests.map((h) => h.productionCost / 1000);
-  const amounts = harvests.map((h) => h.harvestAmount);
-  const weatherss = harvests.map((h) => {
-    const idx = weatherIds.findIndex((id) => id === h.weatherId);
-    return idx + 1;
-  });
-
-  console.log(`Sample data (first 10):`);
-  for (let i = 0; i < Math.min(10, harvests.length); i++) {
-    console.log(
-      `  Cost: ${costs[i]}k, Weather: ${weathers[i]}, Harvest: ${amounts[i]}kg`
-    );
-  }
-
-  // Formula yang digunakan
-  console.log(`\nFormula used:`);
+  console.log("Harvest Statistics:");
+  console.log(`Min harvest: ${Math.min(...harvestAmounts)} kg`);
+  console.log(`Max harvest: ${Math.max(...harvestAmounts)} kg`);
   console.log(
-    `  harvest = 50 + (1.2 * cost_in_thousands) + (-25 * weather_value) + noise`
-  );
-  console.log(
-    `  Expected pattern: Higher cost = more harvest, Higher weather number = less harvest`
+    `Avg harvest: ${Math.round(
+      harvestAmounts.reduce((a, b) => a + b, 0) / harvestAmounts.length
+    )} kg`
   );
 
-  // Statistik dasar
-  const avgCost = costs.reduce((a, b) => a + b) / costs.length;
-  const avgWeather = weatherss.reduce((a, b) => a + b) / weathers.length;
-  const avgHarvest = amounts.reduce((a, b) => a + b) / amounts.length;
-
-  console.log(`\nStatistics:`);
-  console.log(`  Average cost: ${avgCost.toFixed(0)}k`);
-  console.log(`  Average weather: ${avgWeather.toFixed(1)}`);
-  console.log(`  Average harvest: ${avgHarvest.toFixed(0)}kg`);
-  console.log(`  Min harvest: ${Math.min(...amounts)}kg`);
-  console.log(`  Max harvest: ${Math.max(...amounts)}kg`);
+  console.log("Cost Statistics:");
+  console.log(`Min cost: Rp ${Math.min(...productionCosts).toLocaleString()}`);
+  console.log(`Max cost: Rp ${Math.max(...productionCosts).toLocaleString()}`);
+  console.log(
+    `Avg cost: Rp ${Math.round(
+      productionCosts.reduce((a, b) => a + b, 0) / productionCosts.length
+    ).toLocaleString()}`
+  );
 }
 
 async function main() {
-  try {
-    // await createAdmin();
-    await createWeathers();
-    await createHarvests();
-    console.log("Seeding completed successfully!");
-  } catch (error) {
-    console.error("Error during seeding:", error);
-    throw error;
-  }
+  // await createAdmin();
+  await createWeathers();
+  await createHarvests();
+  console.log("Seeding completed successfully!");
 }
 
 main()
@@ -205,10 +180,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    try {
-      await prisma.$disconnect();
-      console.log("Database connection closed.");
-    } catch (error) {
-      console.error("Error closing database connection:", error);
-    }
+    await prisma.$disconnect();
   });
