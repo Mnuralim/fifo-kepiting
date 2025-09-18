@@ -148,7 +148,7 @@ async function createHarvests() {
 
   console.log("90 harvest records seeded successfully!");
 
-  // Calculate and show correlation for verification
+  // Calculate and show codrrelation for verification
   const harvestAmounts = harvests.map((h) => h.harvestAmount);
   const productionCosts = harvests.map((h) => h.productionCost);
   const weatherValues = harvests.map((h, i) => {
