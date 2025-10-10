@@ -3,9 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  directUrl = env("DIRECT_URL")
-  url       = env("DATABASE_URL")
+  provider = "mysql"
+  // directUrl = env("DIRECT_URL")
+  url      = env("DATABASE_URL")
 }
 
 model Admin {

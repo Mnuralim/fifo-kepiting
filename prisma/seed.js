@@ -205,7 +205,7 @@ async function createHarvests() {
 }
 
 async function main() {
-  // await createAdmin();
+  await createAdmin();
   await createWeathers();
   await createHarvests();
   console.log("Seeding completed successfully!");
