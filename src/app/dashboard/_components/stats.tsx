@@ -36,7 +36,7 @@ interface Props {
 export const Dashboard = ({
   totalHarvestRecords,
   totalWeatherTypes,
-  totalPredictions,
+  // totalPredictions,
   activeModels,
   avgHarvestAmount,
   lastTrainingDate,
@@ -54,7 +54,7 @@ Props) => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -99,7 +99,7 @@ Props) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+        {/* <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">
@@ -113,7 +113,7 @@ Props) => {
               <TrendingUp className="w-6 h-6 text-amber-600" />
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
