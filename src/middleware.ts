@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { decryptJWT } from "./actions/session";
 
 const adminProtectedRoutes = [
-  "/dashboard",
+  "/",
   "/harvests",
   "/predict",
   "/settings",
@@ -31,7 +31,7 @@ export default async function middleware(req: NextRequest) {
     }
   }
   if (isAdminPublic && session?.id) {
-    return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
+    return NextResponse.redirect(new URL("/", req.nextUrl));
   }
 
   return NextResponse.next({

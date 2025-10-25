@@ -1,55 +1,55 @@
 "use client";
 
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { Edit, Plus, Trash2, Package } from "lucide-react";
 import React, { useState } from "react";
-import type { Prisma, Weather } from "@prisma/client";
+import type { Stock, Crab, User } from "@prisma/client";
 import { Tabel, type TabelColumn } from "@/app/_components/tabel";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Pagination } from "@/app/_components/pagination";
 import { Modal } from "@/app/_components/modal";
-import { HarvestRecordForm } from "./form";
+import { StockForm } from "./form";
 import { Alert } from "@/app/_components/alert";
 import { useRouter } from "next/navigation";
-import { deleteHarvestRecord } from "@/actions/harvests";
+import { deleteStock } from "@/actions/stocks";
 
-type HarvestRecordWithWeather = Prisma.HarvestRecordGetPayload<{
-  include: {
-    weather: true;
-  };
-}>;
+type StockWithRelations = Stock & {
+  crab: Crab;
+  user: Pick<User, "id" | "name" | "username">;
+};
 
 interface Props {
   pagination: PaginationProps;
-  harvests: HarvestRecordWithWeather[];
-  weathers: Weather[];
+  stocks: StockWithRelations[];
+  crabs: Crab[];
 }
 
-export const HarvestsList = ({ pagination, harvests, weathers }: Props) => {
-  const [selectedHarvest, setSelectedHarvest] =
-    useState<HarvestRecordWithWeather | null>(null);
+export const StocksList = ({ pagination, stocks, crabs }: Props) => {
+  const [selectedStock, setSelectedStock] = useState<StockWithRelations | null>(
+    null
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
 
-  const handelOpenModal = (item?: HarvestRecordWithWeather) => {
+  const handelOpenModal = (item?: StockWithRelations) => {
     if (item) {
-      setSelectedHarvest(item);
+      setSelectedStock(item);
       setIsModalOpen(true);
     } else {
-      setSelectedHarvest(null);
+      setSelectedStock(null);
       setIsModalOpen(true);
     }
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setSelectedHarvest(null);
+    setSelectedStock(null);
   };
 
   const handleCloseAlert = () => {
-    router.replace("/harvests", { scroll: false });
+    router.replace("/stocks", { scroll: false });
   };
 
-  const columns: TabelColumn<HarvestRecordWithWeather>[] = [
+  const columns: TabelColumn<StockWithRelations>[] = [
     {
       header: "No",
       accessor: "id",
@@ -60,22 +60,60 @@ export const HarvestsList = ({ pagination, harvests, weathers }: Props) => {
       ),
     },
     {
-      header: "Tanggal",
-      accessor: (item) => formatDate(new Date(item.date)) || "-",
+      header: "Kode Stok",
+      accessor: "stockCode",
       className: "font-mono text-sm",
     },
     {
-      header: "Cuaca",
-      accessor: (item) =>
-        `${item.weather?.name} (${item.weather?.numericValue})` || "-",
+      header: "Nama Kepiting",
+      accessor: (item) => item.crab.crabName,
     },
     {
-      header: "Biaya Produksi",
-      accessor: (item) => formatCurrency(item.productionCost) || "-",
+      header: "Tanggal Masuk",
+      accessor: (item) => formatDate(item.entryDate),
     },
     {
-      header: "Hasil Panen (KG)",
-      accessor: (item) => item.harvestAmount || "-",
+      header: "Jumlah Masuk",
+      accessor: (item) => `${item.entryQuantity} ${item.crab.unit}`,
+    },
+    {
+      header: "Sisa Stok",
+      accessor: (item) => `${item.remainingStock} ${item.crab.unit}`,
+      render: (item) => {
+        const percentage = (item.remainingStock / item.entryQuantity) * 100;
+        let colorClass = "text-green-600";
+        if (percentage < 30) colorClass = "text-red-600";
+        else if (percentage < 60) colorClass = "text-yellow-600";
+
+        return (
+          <span className={`font-semibold ${colorClass}`}>
+            {item.remainingStock} {item.crab.unit}
+          </span>
+        );
+      },
+    },
+    {
+      header: "Harga Beli",
+      accessor: (item) => formatCurrency(item.purchasePrice),
+    },
+    {
+      header: "Total Biaya",
+      accessor: (item) => formatCurrency(item.totalCost),
+    },
+    {
+      header: "Status",
+      accessor: "stockStatus",
+      render: (item) => (
+        <span
+          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+            item.stockStatus === "AVAILABLE"
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}
+        >
+          {item.stockStatus === "AVAILABLE" ? "Tersedia" : "Habis"}
+        </span>
+      ),
     },
     {
       header: "Aksi",
@@ -90,10 +128,7 @@ export const HarvestsList = ({ pagination, harvests, weathers }: Props) => {
           >
             <Edit className="w-4 h-4" />
           </button>
-          <form
-            action={() => deleteHarvestRecord(item.id)}
-            className="inline-block"
-          >
+          <form action={() => deleteStock(item.id)} className="inline-block">
             <button
               type="submit"
               className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed border border-red-200"
@@ -120,11 +155,16 @@ export const HarvestsList = ({ pagination, harvests, weathers }: Props) => {
           className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-800 transition-colors duration-150 shadow-sm border border-blue-600"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Tambah Data
+          Tambah Stok Baru
         </button>
+
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <Package className="w-4 h-4" />
+          <span>Total Data: {pagination.totalItems}</span>
+        </div>
       </div>
 
-      <Tabel columns={columns} data={harvests} />
+      <Tabel columns={columns} data={stocks} />
 
       <div className="mt-8">
         <Pagination
@@ -137,11 +177,11 @@ export const HarvestsList = ({ pagination, harvests, weathers }: Props) => {
       </div>
 
       <Modal isOpen={isModalOpen} onClose={handleCloseModal}>
-        <HarvestRecordForm
-          weatherOptions={weathers}
-          modal={selectedHarvest ? "edit" : "add"}
+        <StockForm
+          crabs={crabs}
+          modal={selectedStock ? "edit" : "add"}
           onClose={handleCloseModal}
-          selectedHarvestRecord={selectedHarvest}
+          selectedStock={selectedStock}
         />
       </Modal>
       <Alert

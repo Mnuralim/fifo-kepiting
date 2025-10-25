@@ -1,12 +1,10 @@
-import { getAllHarvests, getAllWeathers } from "@/actions/harvests";
-import { HarvestsList } from "./_components/list";
+import { getAllCrabs } from "@/actions/crabs";
+import { CrabsList } from "./_components/list";
 
 interface Props {
   searchParams: Promise<{
     limit?: string;
     skip?: string;
-    startDate?: string;
-    endDate?: string;
     sortBy?: string;
     sortOrder?: string;
     message?: string;
@@ -14,29 +12,16 @@ interface Props {
   }>;
 }
 
-export default async function HarvestsPage({ searchParams }: Props) {
-  const {
-    endDate,
-    skip,
-    sortBy,
-    sortOrder,
-    startDate,
-    limit,
-    alertType,
-    message,
-  } = await searchParams;
+export default async function CrabsPage({ searchParams }: Props) {
+  const { skip, sortBy, sortOrder, limit, alertType, message } =
+    await searchParams;
 
-  const [result, weathers] = await Promise.all([
-    getAllHarvests(
-      limit || "10",
-      skip || "0",
-      sortBy,
-      startDate,
-      endDate,
-      sortOrder
-    ),
-    getAllWeathers(),
-  ]);
+  const result = await getAllCrabs(
+    limit || "10",
+    skip || "0",
+    sortBy,
+    sortOrder
+  );
 
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-8 min-h-screen bg-slate-50">
@@ -45,18 +30,17 @@ export default async function HarvestsPage({ searchParams }: Props) {
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-xl font-semibold text-slate-900">
-                Harvest Management
+                Crab Management
               </h1>
               <p className="text-sm text-slate-600 mt-1">
-                Kelola data panen di sini
+                Kelola data kepiting di sini
               </p>
             </div>
           </div>
         </div>
         <div className="p-6">
-          <HarvestsList
-            weathers={weathers}
-            harvests={result.harvests}
+          <CrabsList
+            crabs={result.crabs}
             pagination={{
               currentPage: result.currentPage,
               totalPages: result.totalPages,
@@ -65,8 +49,6 @@ export default async function HarvestsPage({ searchParams }: Props) {
               preserveParams: {
                 limit,
                 skip,
-                startDate,
-                endDate,
                 sortBy,
                 sortOrder,
                 message,

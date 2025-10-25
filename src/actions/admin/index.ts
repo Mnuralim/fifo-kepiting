@@ -20,19 +20,20 @@ export async function login(
   }
 
   try {
-    const existingAdmin = await prisma.admin.findUnique({
+    const existingUser = await prisma.user.findUnique({
       where: {
         username,
+        active: true,
       },
     });
 
-    if (!existingAdmin) {
+    if (!existingUser) {
       return {
-        error: "Admin tidak ditemukan",
+        error: "Pengguna tidak ditemukan",
       };
     }
 
-    const passwordMatch = await compare(password, existingAdmin.password);
+    const passwordMatch = await compare(password, existingUser.password);
 
     if (!passwordMatch) {
       return {
@@ -40,7 +41,7 @@ export async function login(
       };
     }
 
-    await createSession(existingAdmin.id, existingAdmin.username);
+    await createSession(existingUser.id, existingUser.username);
   } catch (error) {
     if (error instanceof Error) {
       return {
@@ -53,7 +54,7 @@ export async function login(
     }
   }
 
-  redirect("/dashboard");
+  redirect("/");
 }
 
 export async function logOut() {
@@ -62,7 +63,7 @@ export async function logOut() {
 }
 
 export const getAdmin = unstable_cache(async function getAdmin(id: string) {
-  return prisma.admin.findUnique({
+  return prisma.user.findUnique({
     where: {
       id,
     },
@@ -86,17 +87,17 @@ export async function updateAdmin(
 
   try {
     const session = await getSession();
-    const existingAdmin = await getAdmin(session!.id);
-    if (!existingAdmin) {
+    const existingUser = await getAdmin(session!.id);
+    if (!existingUser) {
       return {
         error: "Admin tidak ditemukan",
       };
     }
 
-    let currentPassword = existingAdmin.password;
+    let currentPassword = existingUser.password;
 
     if (oldPassword && password && confirmPassword) {
-      const passwordMatch = await compare(oldPassword, existingAdmin.password);
+      const passwordMatch = await compare(oldPassword, existingUser.password);
 
       if (!passwordMatch) {
         return {
@@ -119,9 +120,9 @@ export async function updateAdmin(
       currentPassword = await hash(password, 10);
     }
 
-    await prisma.admin.update({
+    await prisma.user.update({
       where: {
-        id: existingAdmin.id,
+        id: existingUser.id,
       },
       data: {
         password: currentPassword,

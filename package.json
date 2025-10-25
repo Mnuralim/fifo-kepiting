@@ -12,12 +12,9 @@
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
-    "@tensorflow/tfjs": "^4.22.0",
     "bcryptjs": "^3.0.2",
     "jose": "^6.0.11",
     "lucide-react": "^0.507.0",
-    "mathjs": "^14.5.2",
-    "ml-matrix": "^6.10.0",
     "next": "15.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

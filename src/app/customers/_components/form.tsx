@@ -1,0 +1,191 @@
+"use client";
+
+import { useActionState } from "react";
+import { User, Tag, Phone, MapPin, Briefcase, Loader2 } from "lucide-react";
+import { ErrorMessage } from "@/app/_components/error-message";
+import type { Customer } from "@prisma/client";
+import { addCustomer, updateCustomer } from "@/actions/customers";
+
+interface Props {
+  modal?: "add" | "edit";
+  selectedCustomer?: Customer | null;
+  onClose: () => void;
+}
+
+export const CustomerForm = ({ modal, selectedCustomer, onClose }: Props) => {
+  const [state, action, pending] = useActionState(
+    selectedCustomer ? updateCustomer : addCustomer,
+    {
+      error: null,
+    }
+  );
+
+  return (
+    <div className="w-full max-w-2xl mx-auto">
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold text-blue-600 mb-2">
+          {modal === "add"
+            ? "Tambah Data Pelanggan Baru"
+            : "Edit Data Pelanggan"}
+        </h2>
+        <p className="text-sm text-gray-600">
+          {modal === "add"
+            ? "Lengkapi informasi pelanggan untuk menambahkan data baru"
+            : "Perbarui informasi pelanggan sesuai kebutuhan"}
+        </p>
+      </div>
+
+      <form action={action} className="space-y-6">
+        <input type="hidden" name="id" defaultValue={selectedCustomer?.id} />
+        <ErrorMessage message={state.error} />
+
+        {modal === "add" && (
+          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <div className="flex items-center mb-4">
+              <Tag className="w-5 h-5 text-gray-400 mr-2" />
+              <h3 className="text-lg font-medium text-gray-900">
+                Kode Pelanggan
+              </h3>
+            </div>
+
+            <div>
+              <label
+                htmlFor="customerCode"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Kode Pelanggan *
+              </label>
+              <input
+                type="text"
+                id="customerCode"
+                name="customerCode"
+                defaultValue={selectedCustomer?.customerCode || ""}
+                placeholder="Contoh: CUST001"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-colors duration-150"
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Kode unik untuk identifikasi pelanggan
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center mb-4">
+            <User className="w-5 h-5 text-gray-400 mr-2" />
+            <h3 className="text-lg font-medium text-gray-900">
+              Informasi Pelanggan
+            </h3>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label
+                htmlFor="customerName"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Nama Pelanggan *
+              </label>
+              <input
+                type="text"
+                id="customerName"
+                name="customerName"
+                defaultValue={selectedCustomer?.customerName || ""}
+                placeholder="Masukkan nama pelanggan"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-colors duration-150"
+                required
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="phone"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                <Phone className="w-4 h-4 inline mr-1" />
+                Telepon
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                defaultValue={selectedCustomer?.phone || ""}
+                placeholder="Contoh: 081234567890"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-colors duration-150"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="businessType"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                <Briefcase className="w-4 h-4 inline mr-1" />
+                Jenis Usaha
+              </label>
+              <input
+                type="text"
+                id="businessType"
+                name="businessType"
+                defaultValue={selectedCustomer?.businessType || ""}
+                placeholder="Contoh: Restaurant, Trader, Cafe"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-colors duration-150"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center mb-4">
+            <MapPin className="w-5 h-5 text-gray-400 mr-2" />
+            <h3 className="text-lg font-medium text-gray-900">Alamat</h3>
+          </div>
+
+          <div>
+            <label
+              htmlFor="address"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Alamat Lengkap
+            </label>
+            <textarea
+              id="address"
+              name="address"
+              rows={4}
+              defaultValue={selectedCustomer?.address || ""}
+              placeholder="Masukkan alamat lengkap pelanggan (opsional)"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-colors duration-150 resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full sm:w-auto px-6 py-2.5 bg-white text-gray-700 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-150"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+            disabled={pending}
+          >
+            {pending ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Loading...</span>
+              </span>
+            ) : modal === "add" ? (
+              "Simpan"
+            ) : (
+              "Perbarui"
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};

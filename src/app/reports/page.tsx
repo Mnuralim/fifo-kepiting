@@ -1,8 +1,7 @@
-import { getAllWeathers } from "@/actions/harvests";
-import { PredictForm } from "./_components/form";
+import React from "react";
+import { ReportsMenu } from "./_components/reports-menu";
 
-export default async function PredictPage() {
-  const weathers = await getAllWeathers();
+export default async function ReportsPage() {
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-8 min-h-screen bg-slate-50">
       <div className="bg-white border border-slate-200 shadow-sm rounded-lg">
@@ -10,17 +9,16 @@ export default async function PredictPage() {
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-xl font-semibold text-slate-900">
-                Prediksi Panen
+                Laporan & Analisis
               </h1>
               <p className="text-sm text-slate-600 mt-1">
-                Gunakan model regresi linear untuk memprediksi hasil panen
-                berdasarkan cuaca dan biaya produksi.
+                Pilih jenis laporan yang ingin Anda lihat
               </p>
             </div>
           </div>
         </div>
         <div className="p-6">
-          <PredictForm weathers={weathers} />
+          <ReportsMenu />
         </div>
       </div>
     </main>

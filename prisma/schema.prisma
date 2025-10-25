@@ -1,74 +1,190 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "mysql"
-  // directUrl = env("DIRECT_URL")
   url      = env("DATABASE_URL")
 }
 
-model Admin {
+// User management model
+model User {
   id        String   @id @unique @default(uuid())
-  username  String   @unique
-  password  String
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  username  String   @unique @db.VarChar(50)
+  password  String   @db.VarChar(255)
+  name      String   @db.VarChar(100)
+  role      Role     @default(ADMIN)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("admin")
+  // Relations
+  stocks Stock[]
+  sales  Sale[]
+
+  @@map("users")
 }
 
-model HarvestRecord {
-  id             String   @id @unique @default(uuid())
-  date           DateTime @unique @map("tanggal_panen")
-  weatherId      String?  @map("id_cuaca")
-  harvestAmount  Float    @map("hasil_panen")
-  productionCost Float    @map("biaya_produksi")
-  createdAt      DateTime @default(now()) @map("created_at")
-  weather        Weather? @relation(fields: [weatherId], references: [id])
-
-  @@map("hasil_panen")
+enum Role {
+  ADMIN
+  OWNER
 }
 
-model Weather {
-  id            String          @id @unique @default(uuid())
-  name          String          @unique @map("nama")
-  numericValue  Int             @map("nilai")
-  description   String?         @map("deskripsi")
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @default(now()) @updatedAt @map("updated_at")
-  HarvestRecord HarvestRecord[]
+// Crab/Crab product model
+model Crab {
+  id           String   @id @unique @default(uuid())
+  crabCode     String   @unique @db.VarChar(50)
+  crabName     String   @db.VarChar(150)
+  crabType     String   @db.VarChar(100) // Blue Swimming Crab, Mud Crab, etc.
+  unit         String   @default("Kg") @db.VarChar(20)
+  sellingPrice Float
+  description  String?  @db.Text
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  @@map("cuaca")
+  // Relations
+  stocks      Stock[]
+  saleDetails SaleDetail[]
+
+  @@map("crab")
 }
 
-model RegressionCoefficients {
-  id                  String   @id @unique @default(uuid())
-  modelName           String   @unique @map("nama_model")
-  intercept           Float    @map("intercept") // (b0)
-  weatherCoeff        Float    @map("koefisien_cuaca") // (b1)
-  productionCostCoeff Float    @map("koefisien_biaya_produksi") // (b2)
-  mape                Float?   @map("mape") // Mean Absolute Percentage Error
-  pe                  Float?   @map("pe") // Percentage Error
-  rSquared            Float?   @map("r_squared") // Coefficient of Determination
-  rmse                Float?   @map("rmse") // Root Mean Square Error
-  trainingDataCount   Int      @map("jumlah_data_latih")
-  trainedAt           DateTime @default(now()) @map("waktu_latih")
-  isActive            Boolean  @default(true) @map("aktif")
-  createdAt           DateTime @default(now()) @map("created_at")
+// Stock model (FIFO implementation)
+model Stock {
+  id             String      @id @unique @default(uuid())
+  stockCode      String      @unique @db.VarChar(50)
+  crabId         String
+  entryDate      DateTime
+  entryQuantity  Float
+  remainingStock Float // Remaining unsold stock
+  purchasePrice  Float // Purchase price/COGS per unit
+  totalCost      Float // Total purchase cost
+  supplier       String?     @db.VarChar(150) // Supplier
+  notes          String?     @db.Text
+  stockStatus    StockStatus @default(AVAILABLE)
+  userId         String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  @@map("koefisien_regresi")
+  // Relations
+  crab            Crab             @relation(fields: [crabId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  stockOutDetails StockOutDetail[]
+
+  @@index([crabId, entryDate, stockStatus]) // Index for FIFO query
+  @@map("stocks")
 }
 
-model PredictionLog {
-  id              String   @id @unique @default(uuid())
-  date            DateTime @unique @map("tanggal_panen")
-  weather         String   @map("cuaca")
-  productionCost  Float    @map("biaya_produksi")
-  predictionValue Float    @map("nilai_prediksi")
-  modelUsed       String   @map("model_yang_digunakan")
-  createdAt       DateTime @default(now()) @map("created_at")
+enum StockStatus {
+  AVAILABLE
+  EMPTY
+}
 
-  @@map("log_prediksi")
+// Customer model
+model Customer {
+  id           String   @id @unique @default(uuid())
+  customerCode String   @unique @db.VarChar(50)
+  customerName String   @db.VarChar(150)
+  address      String?  @db.Text
+  phone        String?  @db.VarChar(20)
+  businessType String?  @db.VarChar(100) // Restaurant, Trader, Cafe, etc.
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  sales Sale[]
+
+  @@map("customers")
+}
+
+// Sales transaction model
+model Sale {
+  id            String     @id @unique @default(uuid())
+  saleNumber    String     @unique @db.VarChar(50)
+  saleDate      DateTime
+  customerId    String
+  buyerName     String?    @db.VarChar(150) // For buyers without customer data
+  totalPrice    Float
+  totalCOGS     Float // Total Cost of Goods Sold (FIFO)
+  grossProfit   Float // Gross profit from this sale
+  paymentMethod String     @db.VarChar(50) // Cash, Transfer
+  saleStatus    SaleStatus @default(COMPLETED)
+  notes         String?    @db.Text
+  userId        String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  customer    Customer?    @relation(fields: [customerId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+  saleDetails SaleDetail[]
+
+  @@map("sales")
+}
+
+enum SaleStatus {
+  COMPLETED
+  CANCELLED
+}
+
+// Sale detail model
+model SaleDetail {
+  id          String   @id @unique @default(uuid())
+  saleId      String
+  crabId      String
+  quantity    Float
+  unitPrice   Float
+  subtotal    Float
+  totalCOGS   Float // Total COGS for this item (from FIFO)
+  grossProfit Float // Gross profit for this item
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  sale            Sale             @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  crab            Crab             @relation(fields: [crabId], references: [id])
+  stockOutDetails StockOutDetail[]
+
+  @@map("sale_details")
+}
+
+// Stock out tracking model for FIFO
+model StockOutDetail {
+  id                String   @id @unique @default(uuid())
+  saleDetailId      String
+  stockId           String
+  quantityOut       Float
+  unitPurchasePrice Float
+  totalPurchaseCost Float
+  createdAt         DateTime @default(now())
+
+  // Relations
+  saleDetail SaleDetail @relation(fields: [saleDetailId], references: [id], onDelete: Cascade)
+  stock      Stock      @relation(fields: [stockId], references: [id])
+
+  @@map("stock_out_details")
+}
+
+// Final report model
+model FinalReport {
+  id               String   @id @unique @default(uuid())
+  period           String   @db.VarChar(50) // Format: YYYY-MM or YYYY
+  startDate        DateTime
+  endDate          DateTime
+  totalSales       Float
+  totalCOGS        Float
+  totalGrossProfit Float
+  transactionCount Int
+  totalStockIn     Float
+  totalStockOut    Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([period])
+  @@map("final_reports")
 }

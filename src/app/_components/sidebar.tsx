@@ -13,6 +13,7 @@ import {
   LineChart,
   Cpu,
   TestTube,
+  User2,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { logOut } from "@/actions/admin";
@@ -92,27 +93,32 @@ export function Sidebar({ className = "", username }: SidebarProps) {
     {
       name: "Dashboard",
       icon: <Home className="w-5 h-5" />,
-      href: "/dashboard",
+      href: "/",
     },
     {
-      name: "Data Hasil Panen",
+      name: "Kelola Kepiting",
       icon: <FileSpreadsheet className="w-5 h-5" />,
-      href: "/harvests",
+      href: "/crabs",
     },
     {
-      name: "Latih Data",
+      name: "Kelola Customer",
+      icon: <User2 className="w-5 h-5" />,
+      href: "/customers",
+    },
+    {
+      name: "Kelola Stok",
       icon: <Cpu className="w-5 h-5" />,
-      href: "/train",
+      href: "/stocks",
     },
     {
-      name: "Pengujian",
+      name: "Penjualan",
       icon: <TestTube className="w-5 h-5" />,
-      href: "/test",
+      href: "/sales",
     },
     {
-      name: "Prediksi",
+      name: "Laporan Akhir",
       icon: <LineChart className="w-5 h-5" />,
-      href: "/predict",
+      href: "/reports",
     },
     {
       name: "Akun Saya",
@@ -121,7 +127,7 @@ export function Sidebar({ className = "", username }: SidebarProps) {
     },
   ];
 
-  if (pathName === "/login" || pathName === "/") {
+  if (pathName === "/login") {
     return null;
   }
 
