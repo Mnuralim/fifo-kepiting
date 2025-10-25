@@ -3,10 +3,6 @@ import prisma from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 
-// ============================================
-// 1. LAPORAN PENJUALAN
-// ============================================
-
 type StockWithRelations = Prisma.StockGetPayload<{
   include: {
     crab: {
@@ -24,7 +20,6 @@ type StockWithRelations = Prisma.StockGetPayload<{
   };
 }>;
 
-// Type untuk grouped data
 interface GroupedByCrab {
   crabName: string;
   crabCode: string;
@@ -54,7 +49,6 @@ export const getSalesReport = unstable_cache(
     }
 
     const [sales, summary] = await Promise.all([
-      // Detail penjualan
       prisma.sale.findMany({
         where: whereConditions,
         include: {
@@ -86,7 +80,6 @@ export const getSalesReport = unstable_cache(
         },
       }),
 
-      // Summary
       prisma.sale.aggregate({
         where: whereConditions,
         _sum: {
@@ -116,13 +109,9 @@ export const getSalesReport = unstable_cache(
   },
   ["getSalesReport"],
   {
-    revalidate: 300, // 5 menit
+    revalidate: 300,
   }
 );
-
-// ============================================
-// 2. LAPORAN STOK
-// ============================================
 
 export const getStockReport = unstable_cache(
   async function getStockReport(crabId?: string) {
@@ -330,10 +319,6 @@ export const getProfitLossReport = unstable_cache(
   }
 );
 
-// ============================================
-// 4. LAPORAN PERGERAKAN STOK
-// ============================================
-
 export const getStockMovementReport = unstable_cache(
   async function getStockMovementReport(
     startDate: string,
@@ -463,10 +448,6 @@ export const getStockMovementReport = unstable_cache(
   }
 );
 
-// ============================================
-// 5. GENERATE & SAVE FINAL REPORT
-// ============================================
-
 export async function generateFinalReport(
   period: string,
   periodType: "month" | "year"
@@ -476,22 +457,18 @@ export async function generateFinalReport(
     let endDate: Date;
 
     if (periodType === "month") {
-      // Format: YYYY-MM
       const [year, month] = period.split("-");
       startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
       endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999);
     } else {
-      // Format: YYYY
       startDate = new Date(parseInt(period), 0, 1);
       endDate = new Date(parseInt(period), 11, 31, 23, 59, 59, 999);
     }
 
-    // Cek apakah sudah ada laporan untuk periode ini
     const existingReport = await prisma.finalReport.findUnique({
       where: { period },
     });
 
-    // Hitung data laporan
     const salesData = await prisma.sale.aggregate({
       where: {
         saleDate: {
@@ -548,13 +525,11 @@ export async function generateFinalReport(
 
     let report;
     if (existingReport) {
-      // Update existing report
       report = await prisma.finalReport.update({
         where: { period },
         data: reportData,
       });
     } else {
-      // Create new report
       report = await prisma.finalReport.create({
         data: reportData,
       });
@@ -578,10 +553,6 @@ export async function generateFinalReport(
   }
 }
 
-// ============================================
-// 6. GET ALL FINAL REPORTS
-// ============================================
-
 export const getAllFinalReports = unstable_cache(
   async function getAllFinalReports() {
     const reports = await prisma.finalReport.findMany({
@@ -598,10 +569,6 @@ export const getAllFinalReports = unstable_cache(
   }
 );
 
-// ============================================
-// 7. GET FINAL REPORT BY PERIOD
-// ============================================
-
 export const getFinalReportByPeriod = unstable_cache(
   async function getFinalReportByPeriod(period: string) {
     const report = await prisma.finalReport.findUnique({
@@ -615,10 +582,6 @@ export const getFinalReportByPeriod = unstable_cache(
     revalidate: 300,
   }
 );
-
-// ============================================
-// 8. DASHBOARD STATISTICS
-// ============================================
 
 export const getDashboardStats = unstable_cache(
   async function getDashboardStats() {
@@ -635,12 +598,10 @@ export const getDashboardStats = unstable_cache(
       lowStockProducts,
       recentSales,
     ] = await Promise.all([
-      // Total produk aktif
       prisma.crab.count({
         where: { active: true },
       }),
 
-      // Total stok tersedia
       prisma.stock.aggregate({
         where: {
           stockStatus: "AVAILABLE",
@@ -650,7 +611,6 @@ export const getDashboardStats = unstable_cache(
         },
       }),
 
-      // Penjualan hari ini
       prisma.sale.count({
         where: {
           saleDate: {
@@ -661,7 +621,6 @@ export const getDashboardStats = unstable_cache(
         },
       }),
 
-      // Pendapatan hari ini
       prisma.sale.aggregate({
         where: {
           saleDate: {
@@ -676,7 +635,6 @@ export const getDashboardStats = unstable_cache(
         },
       }),
 
-      // Produk dengan stok rendah (< 10 kg)
       prisma.stock.groupBy({
         by: ["crabId"],
         where: {
@@ -694,7 +652,6 @@ export const getDashboardStats = unstable_cache(
         },
       }),
 
-      // 5 Transaksi terakhir
       prisma.sale.findMany({
         take: 5,
         where: {
@@ -725,6 +682,6 @@ export const getDashboardStats = unstable_cache(
   },
   ["getDashboardStats"],
   {
-    revalidate: 60, // Update setiap 1 menit
+    revalidate: 60,
   }
 );

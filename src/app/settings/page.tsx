@@ -1,5 +1,5 @@
 import { getSession } from "@/actions/session";
-import { AdminProfileUpdate } from "./_components/setting";
+// import { AdminProfileUpdate } from "./_components/setting";
 import { getAdmin } from "@/actions/admin";
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default async function SettingPage({ searchParams }: Props) {
-  const { message, success, error } = await searchParams;
+  const {} = await searchParams;
   const session = await getSession();
   const admin = await getAdmin(session!.id);
   if (!admin) {
@@ -25,11 +25,11 @@ export default async function SettingPage({ searchParams }: Props) {
   }
   return (
     <div className="min-h-screen bg-gray-50 px-6">
-      <AdminProfileUpdate
+      {/* <AdminProfileUpdate
         admin={admin}
         alertType={error ? "error" : success ? "success" : undefined}
         message={message}
-      />
+      /> */}
     </div>
   );
 }

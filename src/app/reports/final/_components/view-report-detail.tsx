@@ -3,9 +3,10 @@
 import React from "react";
 import { formatCurrency } from "@/lib/utils";
 import { X, TrendingUp, ShoppingCart, Package, DollarSign } from "lucide-react";
+import type { FinalReport } from "@prisma/client";
 
 interface Props {
-  report: any;
+  report?: FinalReport;
   onClose: () => void;
 }
 
