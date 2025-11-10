@@ -1,81 +1,128 @@
-// "use server";
+"use server";
 
-// import prisma from "@/lib/prisma";
-// import { unstable_cache } from "next/cache";
+import prisma from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
 
-// export const getStats = unstable_cache(
-//   async function getStats() {
-//     const [
-//       totalHarvestRecords,
-//       totalWeatherTypes,
-//       totalPredictions,
-//       activeModels,
-//       avgHarvestAmount,
-//       lastTrainingDate,
-//       recentPredictions,
-//     ] = await Promise.all([
-//       prisma.harvestRecord.count(),
+export const getStats = unstable_cache(
+  async function getStats() {
+    const [
+      totalCrabs,
+      totalCustomers,
+      totalSales,
+      totalStocks,
+      avgGrossProfit,
+      totalRevenue,
+      totalCOGS,
+      lowStockCount,
+      recentSales,
+    ] = await Promise.all([
+      prisma.crab.count({
+        where: {
+          active: true,
+        },
+      }),
 
-//       prisma.weather.count(),
+      prisma.customer.count({
+        where: {
+          active: true,
+        },
+      }),
 
-//       prisma.predictionLog.count(),
+      prisma.sale.count({
+        where: {
+          saleStatus: "COMPLETED",
+        },
+      }),
 
-//       prisma.regressionCoefficients.count({
-//         where: {
-//           isActive: true,
-//         },
-//       }),
+      prisma.stock.count({
+        where: {
+          stockStatus: "AVAILABLE",
+        },
+      }),
 
-//       // Rata-rata hasil panen
-//       prisma.harvestRecord
-//         .aggregate({
-//           _avg: {
-//             harvestAmount: true,
-//           },
-//         })
-//         .then((result) => result._avg.harvestAmount || 0),
+      prisma.sale
+        .aggregate({
+          _avg: {
+            grossProfit: true,
+          },
+          where: {
+            saleStatus: "COMPLETED",
+          },
+        })
+        .then((result) => result._avg.grossProfit || 0),
 
-//       // Tanggal pelatihan terakhir
-//       prisma.regressionCoefficients
-//         .findFirst({
-//           orderBy: {
-//             trainedAt: "desc",
-//           },
-//           select: {
-//             trainedAt: true,
-//           },
-//         })
-//         .then((result) => result?.trainedAt || null),
+      prisma.sale
+        .aggregate({
+          _sum: {
+            totalPrice: true,
+          },
+          where: {
+            saleStatus: "COMPLETED",
+          },
+        })
+        .then((result) => result._sum.totalPrice || 0),
 
-//       prisma.predictionLog.findMany({
-//         take: 5,
-//         orderBy: {
-//           createdAt: "desc",
-//         },
-//         select: {
-//           id: true,
-//           date: true,
-//           weather: true,
-//           productionCost: true,
-//           predictionValue: true,
-//           modelUsed: true,
-//           createdAt: true,
-//         },
-//       }),
-//     ]);
+      prisma.sale
+        .aggregate({
+          _sum: {
+            totalCOGS: true,
+          },
+          where: {
+            saleStatus: "COMPLETED",
+          },
+        })
+        .then((result) => result._sum.totalCOGS || 0),
 
-//     return {
-//       totalHarvestRecords,
-//       totalWeatherTypes,
-//       totalPredictions,
-//       activeModels,
-//       avgHarvestAmount,
-//       lastTrainingDate,
-//       recentPredictions,
-//     };
-//   },
-//   ["dashboard-stats"],
-//   {
-//     revalidate: 300, // Cache selama 5 menit
-//   }
-// );
+      prisma.stock.count({
+        where: {
+          stockStatus: "AVAILABLE",
+          remainingStock: {
+            lt: 10,
+          },
+        },
+      }),
+
+      prisma.sale.findMany({
+        take: 5,
+        orderBy: {
+          saleDate: "desc",
+        },
+        where: {
+          saleStatus: "COMPLETED",
+        },
+        select: {
+          id: true,
+          saleNumber: true,
+          saleDate: true,
+          totalPrice: true,
+          grossProfit: true,
+          customer: {
+            select: {
+              customerName: true,
+            },
+          },
+          buyerName: true,
+        },
+      }),
+    ]);
+
+    const totalGrossProfit = totalRevenue - totalCOGS;
+
+    return {
+      totalCrabs,
+      totalCustomers,
+      totalSales,
+      totalStocks,
+      avgGrossProfit,
+      totalRevenue,
+      totalCOGS,
+      totalGrossProfit,
+      lowStockCount,
+      recentSales,
+    };
+  },
+  ["dashboard-stats"],
+  {
+    revalidate: 3000,
+  }
+);

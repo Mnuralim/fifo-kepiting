@@ -6,7 +6,6 @@ import {
   BarChart3,
   TrendingUp,
   Package,
-  RefreshCw,
   FileText,
   LayoutDashboard,
 } from "lucide-react";
@@ -34,13 +33,6 @@ const menuItems = [
     color: "purple",
   },
   {
-    title: "Pergerakan Stok",
-    description: "Tracking stok masuk dan keluar (FIFO)",
-    icon: RefreshCw,
-    href: "/reports/stock-movement",
-    color: "orange",
-  },
-  {
     title: "Laporan Final",
     description: "Laporan periodik yang sudah disimpan",
     icon: FileText,
@@ -51,7 +43,7 @@ const menuItems = [
     title: "Dashboard Statistik",
     description: "Overview performa bisnis real-time",
     icon: LayoutDashboard,
-    href: "/dashboard",
+    href: "/",
     color: "cyan",
   },
 ];

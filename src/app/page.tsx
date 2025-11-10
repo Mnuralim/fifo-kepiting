@@ -1,5 +1,23 @@
+import { getStats } from "@/actions/stats";
+import { Dashboard } from "./_components/dashboard";
+
 export default async function Home() {
+  const stats = await getStats();
+
   return (
-    <div className="absolute left-0 top-0 w-full bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50"></div>
+    <div className="w-full px-4 sm:px-6 md:px-8 py-8 min-h-screen bg-slate-50">
+      <Dashboard
+        totalCrabs={stats.totalCrabs}
+        totalCustomers={stats.totalCustomers}
+        totalSales={stats.totalSales}
+        totalStocks={stats.totalStocks}
+        avgGrossProfit={stats.avgGrossProfit}
+        totalRevenue={stats.totalRevenue}
+        totalCOGS={stats.totalCOGS}
+        totalGrossProfit={stats.totalGrossProfit}
+        lowStockCount={stats.lowStockCount}
+        recentSales={stats.recentSales}
+      />
+    </div>
   );
 }
